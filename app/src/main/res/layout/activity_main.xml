@@ -26,11 +26,23 @@
         android:visibility="gone"
         android:onClick="removeGeofencesButtonHandler"
         fab:fab_icon="@drawable/remove_geo"
-        fab:fab_colorNormal="@color/primary_dark"
-        fab:fab_colorPressed="@color/primary_600"
+        fab:fab_colorNormal="@color/primary_400"
+        fab:fab_colorPressed="@color/primary_dark"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="16dp"/>
+
+    <com.getbase.floatingactionbutton.FloatingActionButton
+        android:id="@+id/test_url"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="testServerConnection"
+        fab:fab_icon="@drawable/verified9"
+        fab:fab_colorNormal="@color/primary_200"
+        fab:fab_colorPressed="@color/accent"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="16dp"
+        android:layout_alignParentEnd="true" />
 
     <EditText
         android:layout_width="wrap_content"

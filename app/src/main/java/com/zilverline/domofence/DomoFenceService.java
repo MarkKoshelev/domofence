@@ -17,7 +17,6 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
 
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicResponseHandler;
@@ -72,17 +71,16 @@ public class DomoFenceService extends IntentService {
 
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
 
+            String url = "http://" + intent.getStringExtra("server_address") + ":" +
+                    intent.getStringExtra("server_port") +
+                    "/json.htm?type=command&param=switchlight&idx=" +
+                    intent.getStringExtra("switchIdx")+"&switchcmd=";
+
             if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-                getToServer("http://" + intent.getStringExtra("server_address") + ":" +
-                                        intent.getStringExtra("server_port") +
-                            "/json.htm?type=command&param=switchlight&idx=" +
-                                intent.getStringExtra("switchIdx")+"&switchcmd=On");
+                getToServer(url.replaceAll("\\s","") + "On");
                 Log.v(TAG, "Switch ON");
             } else {
-                getToServer("http://" + intent.getStringExtra("server_address") + ":" +
-                        intent.getStringExtra("server_port") +
-                        "/json.htm?type=command&param=switchlight&idx=" +
-                        intent.getStringExtra("switchIdx")+"&switchcmd=Off");
+                getToServer(url.replaceAll("\\s","") + "Off");
                 Log.v(TAG, "Switch OFF");
             }
 

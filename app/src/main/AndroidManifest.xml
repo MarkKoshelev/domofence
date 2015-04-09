@@ -3,12 +3,15 @@
     package="com.zilverline.domofence" >
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
 
     <application
         android:allowBackup="true"
         android:icon="@drawable/geo_hires"
         android:label="@string/app_name"
-        android:theme="@style/Theme.AppCompat" >
+        android:theme="@style/AppTheme"
+        android:installLocation="internalOnly">
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
@@ -23,6 +26,11 @@
             </intent-filter>
         </activity>
         <service android:name=".DomoFenceService" />
+        <receiver android:name=".GoogleApiBuilder">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
