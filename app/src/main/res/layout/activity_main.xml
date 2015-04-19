@@ -98,7 +98,7 @@
         <EditText
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:inputType="numberDecimal"
+            android:inputType="numberDecimal|numberSigned"
             android:ems="10"
             android:id="@+id/latitude"
             android:hint="Latitude"
@@ -108,7 +108,7 @@
         <EditText
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:inputType="numberDecimal"
+            android:inputType="numberDecimal|numberSigned"
             android:ems="10"
             android:id="@+id/longitude"
             android:hint="Longitude"
