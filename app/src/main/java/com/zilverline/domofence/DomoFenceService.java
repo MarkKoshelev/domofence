@@ -10,19 +10,20 @@ import android.graphics.Color;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
-import android.util.Base64;
 import android.util.Log;
 
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
 
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.DefaultHttpClient;
-
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.Authenticator;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.PasswordAuthentication;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -98,15 +99,38 @@ public class DomoFenceService extends IntentService {
 
     }
 
-    private void getToServer(String service) {
-        HttpGet httpget = new HttpGet(service);
-        httpget.addHeader("Authorization", "Basic " +
-                Base64.encodeToString((username + ":" + password).getBytes(), Base64.NO_WRAP));
-        ResponseHandler<String> responseHandler = new BasicResponseHandler();
+    private void getToServer(String requestUrl) {
+        Authenticator.setDefault(new Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(username, password.toCharArray());
+            }
+        });
+
+        HttpURLConnection urlConnection = null;
         try {
-            new DefaultHttpClient().execute(httpget, responseHandler);
+            URL url = new URL(requestUrl);
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setReadTimeout(2500);
+            urlConnection.setConnectTimeout(3000);
+
+            InputStream in = urlConnection.getInputStream();
+            InputStreamReader isw = new InputStreamReader(in);
+            String status = "";
+
+            int data = isw.read();
+            while (data != -1) {
+                char current = (char) data;
+                data = isw.read();
+                status += current;
+            }
+            Log.v(TAG, "Response: "+status);
+
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
         } catch (IOException e) {
-            Log.e(TAG, e.getMessage());
+            e.printStackTrace();
+        } finally {
+            urlConnection.disconnect();
         }
     }
 

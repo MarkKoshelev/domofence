@@ -8,7 +8,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.*;
 import android.support.v4.content.LocalBroadcastManager;
-import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -16,15 +15,15 @@ import android.widget.Toast;
 
 import com.getbase.floatingactionbutton.FloatingActionButton;
 
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.Authenticator;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.PasswordAuthentication;
+import java.net.SocketTimeoutException;
+import java.net.URL;
 
 public class MainActivity extends Activity {
 
@@ -207,26 +206,42 @@ public class MainActivity extends Activity {
 
         @Override
         protected String doInBackground(String... params) {
-            String status;
-            String url =    "http://" + mServerAddress.getText().toString() + ":" +
+            String status = "";
+            String requestUrl =    "http://" + mServerAddress.getText().toString() + ":" +
                             mServerPort.getText().toString() +
                             "/json.htm?type=command&param=switchlight&idx=" +
                             mIdxOfSwitch.getText().toString() + "&switchcmd=On";
+            Authenticator.setDefault(new Authenticator() {
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(mUsername.getText().toString(), mPassword.getText().toString().toCharArray());
+                }
+            });
 
-            HttpGet httpget = new HttpGet(url.replaceAll("\\s",""));
-            httpget.addHeader("Authorization", "Basic " +
-                    Base64.encodeToString((mUsername.getText().toString() + ":" + mPassword.getText().toString()).getBytes(), Base64.NO_WRAP));
-            ResponseHandler<String> responseHandler = new BasicResponseHandler();
-            HttpParams my_HttpParams = new BasicHttpParams();
-            HttpConnectionParams.setConnectionTimeout(my_HttpParams, 3000);
-
+            HttpURLConnection urlConnection = null;
             try {
-                status = new DefaultHttpClient(my_HttpParams).execute(httpget, responseHandler);
-            } catch (IOException e) {
-                Log.e(TAG, e.getMessage());
-                status = "Error when contacting server: "+e.getMessage();
-            }
+                URL url = new URL(requestUrl.replaceAll("\\s",""));
+                urlConnection = (HttpURLConnection) url.openConnection();
+                urlConnection.setReadTimeout(2500);
+                urlConnection.setConnectTimeout(3000);
 
+                InputStream in = urlConnection.getInputStream();
+                InputStreamReader isw = new InputStreamReader(in);
+
+                int data = isw.read();
+                while (data != -1) {
+                    char current = (char) data;
+                    data = isw.read();
+                    status += current;
+                }
+            } catch (MalformedURLException e) {
+                status = "Error when contacting server: "+e.getMessage();
+            } catch (SocketTimeoutException e){
+                status = "Server did not respond in 3 seconds: "+e.getMessage();
+            } catch (IOException e) {
+                status = "Error when contacting server: "+e.getMessage();
+            } finally {
+                urlConnection.disconnect();
+            }
             return status;
         }
 
