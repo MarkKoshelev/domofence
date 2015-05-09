@@ -20,12 +20,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Authenticator;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
 import java.net.URL;
+import java.net.URLConnection;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 public class DomoFenceService extends IntentService {
 
@@ -72,7 +80,7 @@ public class DomoFenceService extends IntentService {
 
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
 
-            String url = "http://" + intent.getStringExtra("server_address") + ":" +
+            String url = intent.getStringExtra("protocol")+"://" + intent.getStringExtra("server_address") + ":" +
                     intent.getStringExtra("server_port") +
                     "/json.htm?type=command&param=switchlight&idx=" +
                     intent.getStringExtra("switchIdx")+"&switchcmd=";
@@ -106,10 +114,23 @@ public class DomoFenceService extends IntentService {
             }
         });
 
-        HttpURLConnection urlConnection = null;
+        URLConnection urlConnection;
         try {
             URL url = new URL(requestUrl);
-            urlConnection = (HttpURLConnection) url.openConnection();
+
+            if (url.getProtocol().toLowerCase().equals("https")) {
+                Log.v(TAG, "Found https");
+                urlConnection = url.openConnection();
+                HttpsURLConnection httpsUrlConnection = (HttpsURLConnection) urlConnection;
+                SSLSocketFactory sslSocketFactory = createSslSocketFactory();
+
+                httpsUrlConnection.setSSLSocketFactory(sslSocketFactory);
+
+                urlConnection = httpsUrlConnection;
+            } else {
+                urlConnection = url.openConnection();
+            }
+
             urlConnection.setReadTimeout(2500);
             urlConnection.setConnectTimeout(3000);
 
@@ -129,9 +150,23 @@ public class DomoFenceService extends IntentService {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            urlConnection.disconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    private SSLSocketFactory createSslSocketFactory() throws Exception {
+        TrustManager[] byPassTrustManagers = new TrustManager[] { new X509TrustManager() {
+            public X509Certificate[] getAcceptedIssuers() {
+                return new X509Certificate[0];
+            }
+            public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+            public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+        } };
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, byPassTrustManagers, new SecureRandom());
+
+        return sslContext.getSocketFactory();
     }
 
     private String getGeofenceTransitionDetails(
@@ -158,7 +193,7 @@ public class DomoFenceService extends IntentService {
         PendingIntent notificationPendingIntent =
                 stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        builder.setSmallIcon(R.drawable.ic_launcher)
+        builder.setSmallIcon(R.drawable.ic_launcher_white)
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(),
                         R.drawable.ic_launcher))
                 .setColor(Color.RED)

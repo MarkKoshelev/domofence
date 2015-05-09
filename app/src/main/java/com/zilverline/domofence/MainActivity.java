@@ -10,7 +10,9 @@ import android.os.*;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.getbase.floatingactionbutton.FloatingActionButton;
@@ -19,11 +21,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Authenticator;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
-import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.net.URLConnection;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 public class MainActivity extends Activity {
 
@@ -38,6 +47,7 @@ public class MainActivity extends Activity {
     private FloatingActionButton mAddGeofencesButton;
     private FloatingActionButton mRemoveGeofencesButton;
     private EditText mServerAddress, mServerPort, mUsername, mPassword, mLatitude, mLongitude, mGeofenceRadius, mIdxOfSwitch;
+    private Spinner mSpinner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +67,11 @@ public class MainActivity extends Activity {
         mLongitude = (EditText) findViewById(R.id.longitude);
         mGeofenceRadius = (EditText) findViewById(R.id.fence_radius);
         mIdxOfSwitch = (EditText) findViewById(R.id.switch_idx);
+        mSpinner = (Spinner) findViewById(R.id.spinner);
+
+        String[] items = new String[]{"http", "https"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, items);
+        mSpinner.setAdapter(adapter);
 
         mSharedPreferences = getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
                 MODE_PRIVATE);
@@ -93,6 +108,19 @@ public class MainActivity extends Activity {
         String idx_of_switch = mSharedPreferences.getString(PACKAGENAME + ".idx_of_switch", "not_found");
         if(!idx_of_switch.equals("not_found")){
             mIdxOfSwitch.setText(idx_of_switch);
+        }
+        String protocol = mSharedPreferences.getString(PACKAGENAME + ".protocol", "not_found");
+        if(protocol.equals("http") || protocol.equals("https")){
+            if(protocol.equals("http")){
+                mSpinner.setSelection(0);
+            } else if (protocol.equals("https")){
+                mSpinner.setSelection(1);
+            }
+        } else {
+            SharedPreferences.Editor editor = mSharedPreferences.edit();
+            editor.putString(PACKAGENAME + ".protocol", "http");
+
+            editor.commit();
         }
 
         setButtonsEnabledState();
@@ -152,7 +180,8 @@ public class MainActivity extends Activity {
                                         mLatitude.getText().toString(),
                                         mLongitude.getText().toString(),
                                         mGeofenceRadius.getText().toString(),
-                                        mIdxOfSwitch.getText().toString());
+                                        mIdxOfSwitch.getText().toString(),
+                                        mSpinner.getSelectedItem().toString());
         Log.v(TAG, "Adding geofence");
     }
 
@@ -168,12 +197,13 @@ public class MainActivity extends Activity {
                                         mLatitude.getText().toString(),
                                         mLongitude.getText().toString(),
                                         mGeofenceRadius.getText().toString(),
-                                        mIdxOfSwitch.getText().toString());
+                                        mIdxOfSwitch.getText().toString(),
+                                        mSpinner.getSelectedItem().toString());
         Log.v(TAG, "Removing geofence");
     }
 
     private void setButtonsEnabledState() {
-        Log.v(TAG, "Reading SET geofence from storage: "+mSharedPreferences.getBoolean(PACKAGENAME + ".GEOFENCES_ADDED_KEY", false));
+        Log.v(TAG, "Reading SET geofence from storage: " + mSharedPreferences.getBoolean(PACKAGENAME + ".GEOFENCES_ADDED_KEY", false));
         if (mGeofencesAdded) {
             mAddGeofencesButton.setVisibility(View.GONE);
             mRemoveGeofencesButton.setVisibility(View.VISIBLE);
@@ -194,7 +224,7 @@ public class MainActivity extends Activity {
                 mLongitude.getText().length()==0 ||
                 mGeofenceRadius.getText().length()==0 ||
                 mIdxOfSwitch.getText().length()==0) {
-            Toast.makeText(this, "Please enter ALL fields before starting a geofence.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please enter ALL fields before testing the connection.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -207,22 +237,40 @@ public class MainActivity extends Activity {
         @Override
         protected String doInBackground(String... params) {
             String status = "";
-            String requestUrl =    "http://" + mServerAddress.getText().toString() + ":" +
+            String requestUrl = mSpinner.getSelectedItem().toString() + "://" + mServerAddress.getText().toString() + ":" +
                             mServerPort.getText().toString() +
                             "/json.htm?type=command&param=switchlight&idx=" +
                             mIdxOfSwitch.getText().toString() + "&switchcmd=On";
+
             Authenticator.setDefault(new Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(mUsername.getText().toString(), mPassword.getText().toString().toCharArray());
                 }
             });
 
-            HttpURLConnection urlConnection = null;
+
+            URLConnection urlConnection;
+
             try {
                 URL url = new URL(requestUrl.replaceAll("\\s",""));
-                urlConnection = (HttpURLConnection) url.openConnection();
+
+                if (url.getProtocol().toLowerCase().equals("https")) {
+                    Log.v(TAG, "Found https");
+                    urlConnection = url.openConnection();
+                    HttpsURLConnection httpsUrlConnection = (HttpsURLConnection) urlConnection;
+                    SSLSocketFactory sslSocketFactory = createSslSocketFactory();
+
+                    httpsUrlConnection.setSSLSocketFactory(sslSocketFactory);
+
+                    urlConnection = httpsUrlConnection;
+                } else {
+                    urlConnection = url.openConnection();
+                }
+
                 urlConnection.setReadTimeout(2500);
                 urlConnection.setConnectTimeout(3000);
+                String header = "Basic " + new String(android.util.Base64.encode("user:pass".getBytes(), android.util.Base64.NO_WRAP));
+                urlConnection.addRequestProperty("Authorization", header);
 
                 InputStream in = urlConnection.getInputStream();
                 InputStreamReader isw = new InputStreamReader(in);
@@ -234,16 +282,32 @@ public class MainActivity extends Activity {
                     status += current;
                 }
             } catch (MalformedURLException e) {
-                status = "Error when contacting server: "+e.getMessage();
-            } catch (SocketTimeoutException e){
-                status = "Server did not respond in 3 seconds: "+e.getMessage();
+                status = "Error in URL: " + e.getMessage();
+                e.printStackTrace();
             } catch (IOException e) {
-                status = "Error when contacting server: "+e.getMessage();
-            } finally {
-                urlConnection.disconnect();
+                status = "Error: " + e.getMessage();
+                e.printStackTrace();
+            } catch (Exception e) {
+                status = "Error: " + e.getMessage();
+                e.printStackTrace();
             }
             return status;
         }
+
+        private SSLSocketFactory createSslSocketFactory() throws Exception {
+            TrustManager[] byPassTrustManagers = new TrustManager[] { new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+            } };
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, byPassTrustManagers, new SecureRandom());
+
+            return sslContext.getSocketFactory();
+        }
+
 
         @Override
         protected void onPostExecute(String result) {

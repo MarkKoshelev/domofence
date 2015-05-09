@@ -32,7 +32,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
     private boolean mGeofencesAdded, start_after_boot;
     private PendingIntent mGeofencePendingIntent;
     private SharedPreferences mSharedPreferences;
-    private String server_address, server_port, username, password, latitude, longitude, geofence_radius, idx_of_switch;
+    private String server_address, server_port, username, password, latitude, longitude, geofence_radius, idx_of_switch, protocol;
     private Context baseContext;
 
 
@@ -54,6 +54,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
             longitude = mSharedPreferences.getString(PACKAGENAME + ".longitude","not_found");
             geofence_radius = mSharedPreferences.getString(PACKAGENAME + ".geofence_radius","not_found");
             idx_of_switch = mSharedPreferences.getString(PACKAGENAME + ".idx_of_switch","not_found");
+            protocol = mSharedPreferences.getString(PACKAGENAME + ".protocol", "not_found");
 
             start_after_boot = true;
             mGoogleApiClient.connect();
@@ -79,7 +80,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         buildGoogleApiClient();
     }
 
-    protected void addGeofence(String server_address, String server_port, String password, String username, String latitude, String longitude, String geofence_radius, String idx_of_switch){
+    protected void addGeofence(String server_address, String server_port, String password, String username, String latitude, String longitude, String geofence_radius, String idx_of_switch, String protocol){
         Log.v(TAG, "Adding a geofence.  server_address: "+server_address+
                                         " server_port: "+server_port+
                                         " password: "+password+
@@ -87,7 +88,8 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
                                         " latitude: "+latitude+
                                         " longitude: "+longitude+
                                         " geofence_radius: "+geofence_radius+
-                                        " idx_of_switch: "+idx_of_switch);
+                                        " idx_of_switch: "+idx_of_switch+
+                                        " protocol: "+protocol);
 
         this.server_address = server_address;
         this.server_port = server_port;
@@ -97,6 +99,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         this.longitude = longitude;
         this.geofence_radius = geofence_radius;
         this.idx_of_switch = idx_of_switch;
+        this.protocol = protocol;
 
         populateGeofenceList();
 
@@ -111,7 +114,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         }
     }
 
-    protected void removeGeofence(String server_address, String server_port, String password, String username, String latitude, String longitude, String geofence_radius, String idx_of_switch) {
+    protected void removeGeofence(String server_address, String server_port, String password, String username, String latitude, String longitude, String geofence_radius, String idx_of_switch, String protocol) {
         this.server_address = server_address;
         this.server_port = server_port;
         this.password = password;
@@ -120,6 +123,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         this.longitude = longitude;
         this.geofence_radius = geofence_radius;
         this.idx_of_switch = idx_of_switch;
+        this.protocol = protocol;
 
         if(this.server_address.isEmpty()){
             populateGeofenceList();
@@ -149,6 +153,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         intent.putExtra("username", username);
         intent.putExtra("password", password);
         intent.putExtra("switchIdx", idx_of_switch);
+        intent.putExtra("protocol", protocol);
 
         Log.v(TAG, "Sending the Geofence Intent");
 
@@ -157,7 +162,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
     }
 
     public void populateGeofenceList() {
-        Log.v(TAG, "Populating the Geofences: "+server_address+ ":"+server_port);
+        Log.v(TAG, "Populating the Geofences: "+protocol+"://"+server_address+ ":"+server_port);
 
         Log.v(TAG, "Values: "+Double.valueOf(latitude) + " " +
                 Double.valueOf(longitude) + " " +
@@ -197,7 +202,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
     public void onConnected(Bundle bundle) {
         Log.i(TAG, "Connected to GoogleApiClient");
         if(start_after_boot){
-            addGeofence(server_address, server_port, password, username, latitude, longitude, geofence_radius, idx_of_switch);
+            addGeofence(server_address, server_port, password, username, latitude, longitude, geofence_radius, idx_of_switch, protocol);
         }
 
     }
@@ -227,6 +232,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
             editor.putString(PACKAGENAME + ".latitude", latitude);
             editor.putString(PACKAGENAME + ".geofence_radius", geofence_radius);
             editor.putString(PACKAGENAME + ".idx_of_switch", idx_of_switch);
+            editor.putString(PACKAGENAME + ".protocol", protocol);
 
             editor.commit();
 
