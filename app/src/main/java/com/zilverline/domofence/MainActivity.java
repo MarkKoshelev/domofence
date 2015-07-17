@@ -17,7 +17,6 @@ import android.widget.Toast;
 
 import com.getbase.floatingactionbutton.FloatingActionButton;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Authenticator;
@@ -269,8 +268,6 @@ public class MainActivity extends Activity {
 
                 urlConnection.setReadTimeout(2500);
                 urlConnection.setConnectTimeout(3000);
-                String header = "Basic " + new String(android.util.Base64.encode("user:pass".getBytes(), android.util.Base64.NO_WRAP));
-                urlConnection.addRequestProperty("Authorization", header);
 
                 InputStream in = urlConnection.getInputStream();
                 InputStreamReader isw = new InputStreamReader(in);
@@ -283,9 +280,6 @@ public class MainActivity extends Activity {
                 }
             } catch (MalformedURLException e) {
                 status = "Error in URL: " + e.getMessage();
-                e.printStackTrace();
-            } catch (IOException e) {
-                status = "Error: " + e.getMessage();
                 e.printStackTrace();
             } catch (Exception e) {
                 status = "Error: " + e.getMessage();

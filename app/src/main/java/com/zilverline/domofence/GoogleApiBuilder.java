@@ -76,7 +76,6 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
                 Context.MODE_PRIVATE);
         mGeofencesAdded = mSharedPreferences.getBoolean(PACKAGENAME + ".GEOFENCES_ADDED_KEY", false);
 
-
         buildGoogleApiClient();
     }
 

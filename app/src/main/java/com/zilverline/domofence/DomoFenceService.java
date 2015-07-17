@@ -16,29 +16,14 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.Authenticator;
-import java.net.MalformedURLException;
-import java.net.PasswordAuthentication;
-import java.net.URL;
-import java.net.URLConnection;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 public class DomoFenceService extends IntentService {
 
     private static final String TAG = "DomoFenceService";
     private String username, password;
+
 
     public DomoFenceService() {
         super(TAG);
@@ -48,6 +33,11 @@ public class DomoFenceService extends IntentService {
     public void onCreate() {
         super.onCreate();
         Log.v(TAG, "Service started");
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
     }
 
     @Override
@@ -73,7 +63,7 @@ public class DomoFenceService extends IntentService {
             password = intent.getStringExtra("password");
         }
         int geofenceTransition = geofencingEvent.getGeofenceTransition();
-        Log.v(TAG, "Geofence Transition: "+geofenceTransition);
+        Log.v(TAG, "Geofence Transition: " + geofenceTransition);
 
         if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ||
                 geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
@@ -86,10 +76,10 @@ public class DomoFenceService extends IntentService {
                     intent.getStringExtra("switchIdx")+"&switchcmd=";
 
             if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-                getToServer(url.replaceAll("\\s","") + "On");
+                sendStatus(url.replaceAll("\\s", "") + "On");
                 Log.v(TAG, "Switch ON");
             } else {
-                getToServer(url.replaceAll("\\s","") + "Off");
+                sendStatus(url.replaceAll("\\s", "") + "Off");
                 Log.v(TAG, "Switch OFF");
             }
 
@@ -107,66 +97,14 @@ public class DomoFenceService extends IntentService {
 
     }
 
-    private void getToServer(String requestUrl) {
-        Authenticator.setDefault(new Authenticator() {
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(username, password.toCharArray());
-            }
-        });
+    private void sendStatus(String message) {
+        Intent intent = new Intent("com.zilverline.domofence.DomoFenceService");
+        intent.putExtra("url", message);
+        intent.putExtra("username", username);
+        intent.putExtra("password", password);
 
-        URLConnection urlConnection;
-        try {
-            URL url = new URL(requestUrl);
-
-            if (url.getProtocol().toLowerCase().equals("https")) {
-                Log.v(TAG, "Found https");
-                urlConnection = url.openConnection();
-                HttpsURLConnection httpsUrlConnection = (HttpsURLConnection) urlConnection;
-                SSLSocketFactory sslSocketFactory = createSslSocketFactory();
-
-                httpsUrlConnection.setSSLSocketFactory(sslSocketFactory);
-
-                urlConnection = httpsUrlConnection;
-            } else {
-                urlConnection = url.openConnection();
-            }
-
-            urlConnection.setReadTimeout(2500);
-            urlConnection.setConnectTimeout(3000);
-
-            InputStream in = urlConnection.getInputStream();
-            InputStreamReader isw = new InputStreamReader(in);
-            String status = "";
-
-            int data = isw.read();
-            while (data != -1) {
-                char current = (char) data;
-                data = isw.read();
-                status += current;
-            }
-            Log.v(TAG, "Response: "+status);
-
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private SSLSocketFactory createSslSocketFactory() throws Exception {
-        TrustManager[] byPassTrustManagers = new TrustManager[] { new X509TrustManager() {
-            public X509Certificate[] getAcceptedIssuers() {
-                return new X509Certificate[0];
-            }
-            public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-            public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-        } };
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(null, byPassTrustManagers, new SecureRandom());
-
-        return sslContext.getSocketFactory();
+        Log.v(TAG, "Sending Intent");
+        sendBroadcast(intent);
     }
 
     private String getGeofenceTransitionDetails(
