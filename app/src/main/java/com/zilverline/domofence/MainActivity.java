@@ -119,7 +119,7 @@ public class MainActivity extends Activity {
             SharedPreferences.Editor editor = mSharedPreferences.edit();
             editor.putString(PACKAGENAME + ".protocol", "http");
 
-            editor.commit();
+            editor.apply();
         }
 
         setButtonsEnabledState();
@@ -227,7 +227,11 @@ public class MainActivity extends Activity {
             return;
         }
 
-        new TestURL().execute("");
+        new TestURL().execute(  mSpinner.getSelectedItem().toString() + "://" +
+                                mServerAddress.getText().toString() + ":" +
+                                mServerPort.getText().toString() +
+                                "/json.htm?type=command&param=switchlight&idx=" +
+                                mIdxOfSwitch.getText().toString() + "&switchcmd=On");
 
     }
 
@@ -236,10 +240,7 @@ public class MainActivity extends Activity {
         @Override
         protected String doInBackground(String... params) {
             String status = "";
-            String requestUrl = mSpinner.getSelectedItem().toString() + "://" + mServerAddress.getText().toString() + ":" +
-                            mServerPort.getText().toString() +
-                            "/json.htm?type=command&param=switchlight&idx=" +
-                            mIdxOfSwitch.getText().toString() + "&switchcmd=On";
+            String requestUrl = params[0];
 
             Authenticator.setDefault(new Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
