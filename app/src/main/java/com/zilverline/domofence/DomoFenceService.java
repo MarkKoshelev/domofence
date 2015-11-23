@@ -36,11 +36,6 @@ public class DomoFenceService extends IntentService {
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
-    }
-
-    @Override
     protected void onHandleIntent(Intent intent) {
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
