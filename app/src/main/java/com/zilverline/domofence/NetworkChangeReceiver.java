@@ -28,7 +28,7 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
 
     private static final String PACKAGENAME = "com.zilverline.domofence";
 
-    private String TAG = "NetworkChangeReceiver";
+    private final String TAG = "NetworkChangeReceiver";
     private Context baseContext;
     private SharedPreferences mSharedPreferences;
     private String url, username, password;
