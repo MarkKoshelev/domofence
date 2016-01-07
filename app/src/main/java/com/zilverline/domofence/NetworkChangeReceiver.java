@@ -18,8 +18,10 @@ import java.net.URLConnection;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -132,6 +134,13 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
                     SSLSocketFactory sslSocketFactory = createSslSocketFactory();
 
                     httpsUrlConnection.setSSLSocketFactory(sslSocketFactory);
+                    httpsUrlConnection.setHostnameVerifier(new HostnameVerifier() {
+                        @Override
+                        public boolean verify(String hostname, SSLSession session) {
+                            HostnameVerifier hv = HttpsURLConnection.getDefaultHostnameVerifier();
+                            return hv.verify(hostname, session) || hv.verify("*.domoticz.com", session);
+                        }
+                    });
 
                     urlConnection = httpsUrlConnection;
                 } else {
