@@ -187,7 +187,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
                 .addApi(LocationServices.API)
                 .build();
 
-        Log.v(TAG, "Building the Google API Client: "+mGoogleApiClient.getSessionId());
+        Log.v(TAG, "Building the Google API Client");
     }
 
     private GeofencingRequest getGeofencingRequest() {
@@ -233,7 +233,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
             editor.putString(PACKAGENAME + ".idx_of_switch", idx_of_switch);
             editor.putString(PACKAGENAME + ".protocol", protocol);
 
-            editor.commit();
+            editor.apply();
 
             if(mGeofencesAdded) {
                 sendStatus("Added");

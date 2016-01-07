@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.*;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
@@ -14,8 +15,6 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
-
-import com.getbase.floatingactionbutton.FloatingActionButton;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -27,8 +26,10 @@ import java.net.URLConnection;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -43,8 +44,7 @@ public class MainActivity extends Activity {
     private BroadcastReceiver mBroadcastReceiver;
     private LocalBroadcastManager mgr;
 
-    private FloatingActionButton mAddGeofencesButton;
-    private FloatingActionButton mRemoveGeofencesButton;
+    private FloatingActionButton mAddGeofencesButton, mRemoveGeofencesButton;
     private EditText mServerAddress, mServerPort, mUsername, mPassword, mLatitude, mLongitude, mGeofenceRadius, mIdxOfSwitch;
     private Spinner mSpinner;
 
@@ -261,7 +261,13 @@ public class MainActivity extends Activity {
                     SSLSocketFactory sslSocketFactory = createSslSocketFactory();
 
                     httpsUrlConnection.setSSLSocketFactory(sslSocketFactory);
-
+                    httpsUrlConnection.setHostnameVerifier(new HostnameVerifier() {
+                        @Override
+                        public boolean verify(String hostname, SSLSession session) {
+                            HostnameVerifier hv = HttpsURLConnection.getDefaultHostnameVerifier();
+                            return hv.verify(hostname, session) || hv.verify("*.domoticz.com", session);
+                        }
+                    });
                     urlConnection = httpsUrlConnection;
                 } else {
                     urlConnection = url.openConnection();
