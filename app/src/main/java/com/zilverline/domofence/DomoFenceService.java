@@ -5,7 +5,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.BitmapFactory;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
@@ -23,6 +23,7 @@ public class DomoFenceService extends IntentService {
 
     private static final String TAG = "DomoFenceService";
     private String username, password;
+    private static final String PACKAGENAME = "com.zilverline.domofence";
 
 
     public DomoFenceService() {
@@ -89,8 +90,16 @@ public class DomoFenceService extends IntentService {
                     geofenceTransition,
                     triggeringGeofences
             );
+            SharedPreferences mSharedPreferences = getApplicationContext().getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
+                    Context.MODE_PRIVATE);
 
-            sendNotification(geofenceTransitionDetails);
+            boolean toggleNotifications = mSharedPreferences.getBoolean(PACKAGENAME + ".notifications", true);
+            Log.v(TAG, "Notify: " + toggleNotifications);
+
+            if (toggleNotifications) {
+                sendNotification(geofenceTransitionDetails);
+            }
+
             Log.i(TAG, geofenceTransitionDetails);
         } else {
             Log.e(TAG, "Geofence transition error: invalid transition type: "+geofenceTransition);
@@ -115,7 +124,7 @@ public class DomoFenceService extends IntentService {
 
         String geofenceTransitionString = getTransitionString(geofenceTransition);
 
-        ArrayList triggeringGeofencesIdsList = new ArrayList();
+        ArrayList<String> triggeringGeofencesIdsList = new ArrayList<>();
         for (Geofence geofence : triggeringGeofences) {
             triggeringGeofencesIdsList.add(geofence.getRequestId());
         }
@@ -132,10 +141,7 @@ public class DomoFenceService extends IntentService {
         PendingIntent notificationPendingIntent =
                 stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        builder.setSmallIcon(R.drawable.ic_launcher_white)
-                .setLargeIcon(BitmapFactory.decodeResource(getResources(),
-                        R.drawable.ic_launcher))
-                .setColor(Color.RED)
+        builder.setSmallIcon(R.drawable.geofence_notification)
                 .setContentTitle(notificationDetails)
                 .setContentText("Tap here to return to DomoFence")
                 .setContentIntent(notificationPendingIntent);

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Base.Theme.AppCompat.Light.DarkActionBar">
+    <style name="AppTheme" parent="Base.Theme.AppCompat.Light">
         <!-- Main theme colors -->
         <!--   your app branding color for the app bar -->
         <item name="android:colorPrimary">@color/primary</item>
@@ -18,10 +18,6 @@
             @style/spinnerDropDownItemStyle
         </item>
     </style>
-    <style name="menu_labels_style">
-        <item name="android:background">@drawable/fab_label_background</item>
-        <item name="android:textColor">@color/primary</item>
-    </style>
     <style name="spinnerItemStyle">
         <item name="android:padding">10dp</item>
         <item name="android:textSize">20sp</item>
@@ -30,5 +26,10 @@
     <style name="spinnerDropDownItemStyle">
         <item name="android:padding">20dp</item>
         <item name="android:textSize">30sp</item>
+    </style>
+
+    <style name="menu_labels_style">
+        <item name="android:background">@drawable/fab_label_background</item>
+        <item name="android:textColor">@color/accent</item>
     </style>
 </resources>

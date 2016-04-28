@@ -1,13 +1,17 @@
 package com.zilverline.domofence;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.os.*;
-import android.support.design.widget.FloatingActionButton;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
@@ -15,6 +19,10 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
+
+import com.getbase.floatingactionbutton.FloatingActionButton;
+import com.getbase.floatingactionbutton.FloatingActionsMenu;
+import com.google.android.gms.common.api.GoogleApiClient;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -37,14 +45,15 @@ import javax.net.ssl.X509TrustManager;
 public class MainActivity extends Activity {
 
     private static final String TAG = "DomoFence";
+    private static final int REQUEST_LOCATION_ACCESS = 1977;
     private SharedPreferences mSharedPreferences;
-    private boolean mGeofencesAdded;
+    private boolean mGeofencesAdded, mNotifications;
     private static final String PACKAGENAME = "com.zilverline.domofence";
     private GoogleApiBuilder googleApiBuilder;
     private BroadcastReceiver mBroadcastReceiver;
     private LocalBroadcastManager mgr;
 
-    private FloatingActionButton mAddGeofencesButton, mRemoveGeofencesButton;
+    private FloatingActionButton addGeofencesButton, removeGeofencesButton, toggleNotification;
     private EditText mServerAddress, mServerPort, mUsername, mPassword, mLatitude, mLongitude, mGeofenceRadius, mIdxOfSwitch;
     private Spinner mSpinner;
 
@@ -53,11 +62,17 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        googleApiBuilder = new GoogleApiBuilder();
-        googleApiBuilder.initialize(this);
 
-        mAddGeofencesButton = (FloatingActionButton) findViewById(R.id.start);
-        mRemoveGeofencesButton = (FloatingActionButton) findViewById(R.id.stop);
+        googleApiBuilder = new GoogleApiBuilder();
+        try {
+            googleApiBuilder.initialize(this);
+        } catch (GoogleApiBuilder.LocationServiceNoPermission e) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_ACCESS);
+        }
+
+        addGeofencesButton = (FloatingActionButton) findViewById(R.id.start);
+        removeGeofencesButton = (FloatingActionButton) findViewById(R.id.stop);
+        toggleNotification = (FloatingActionButton) findViewById(R.id.toggleNotifications);
         mServerAddress = (EditText) findViewById(R.id.server_address);
         mServerPort = (EditText) findViewById(R.id.server_port);
         mUsername = (EditText) findViewById(R.id.username);
@@ -67,6 +82,36 @@ public class MainActivity extends Activity {
         mGeofenceRadius = (EditText) findViewById(R.id.fence_radius);
         mIdxOfSwitch = (EditText) findViewById(R.id.switch_idx);
         mSpinner = (Spinner) findViewById(R.id.spinner);
+
+
+        FloatingActionsMenu actionsMenu = (FloatingActionsMenu) findViewById(R.id.extra_buttons);
+        actionsMenu.setOnFloatingActionsMenuUpdateListener(new FloatingActionsMenu.OnFloatingActionsMenuUpdateListener() {
+            @Override
+            public void onMenuExpanded() {
+                mServerAddress.setEnabled(false);
+                mServerPort.setEnabled(false);
+                mSpinner.setEnabled(false);
+                mUsername.setEnabled(false);
+                mPassword.setEnabled(false);
+                mLatitude.setEnabled(false);
+                mLongitude.setEnabled(false);
+                mGeofenceRadius.setEnabled(false);
+                mIdxOfSwitch.setEnabled(false);
+            }
+
+            @Override
+            public void onMenuCollapsed() {
+                mServerAddress.setEnabled(true);
+                mServerPort.setEnabled(true);
+                mSpinner.setEnabled(true);
+                mUsername.setEnabled(true);
+                mPassword.setEnabled(true);
+                mLatitude.setEnabled(true);
+                mLongitude.setEnabled(true);
+                mGeofenceRadius.setEnabled(true);
+                mIdxOfSwitch.setEnabled(true);
+            }
+        });
 
         String[] items = new String[]{"http", "https"};
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, items);
@@ -118,8 +163,18 @@ public class MainActivity extends Activity {
         } else {
             SharedPreferences.Editor editor = mSharedPreferences.edit();
             editor.putString(PACKAGENAME + ".protocol", "http");
-
             editor.apply();
+        }
+
+        mNotifications = mSharedPreferences.getBoolean(PACKAGENAME + ".notifications", true);
+        Log.v(TAG, "toggleNotifications " + mNotifications);
+
+        if (mNotifications) {
+            toggleNotification.setIcon(R.drawable.ic_notifications_off_black_48dp);
+            toggleNotification.setTitle("Disable notifications");
+        } else {
+            toggleNotification.setTitle("Enable notifications");
+            toggleNotification.setIcon(R.drawable.ic_notifications_black_48dp);
         }
 
         setButtonsEnabledState();
@@ -129,17 +184,21 @@ public class MainActivity extends Activity {
     protected void onStart() {
         Log.v(TAG, "onStart()");
         super.onStart();
-        googleApiBuilder.getGoogleApiClient().connect();
+        GoogleApiClient apiClient = googleApiBuilder.getGoogleApiClient();
+
+        if (apiClient != null) {
+            apiClient.connect();
+        }
 
         mBroadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent.getStringExtra("status").equals("Added")) {
-                    mAddGeofencesButton.setVisibility(View.GONE);
-                    mRemoveGeofencesButton.setVisibility(View.VISIBLE);
+                    addGeofencesButton.setVisibility(View.GONE);
+                    removeGeofencesButton.setVisibility(View.VISIBLE);
                 } else {
-                    mAddGeofencesButton.setVisibility(View.VISIBLE);
-                    mRemoveGeofencesButton.setVisibility(View.GONE);
+                    addGeofencesButton.setVisibility(View.VISIBLE);
+                    removeGeofencesButton.setVisibility(View.GONE);
                 }
             }
         };
@@ -172,15 +231,15 @@ public class MainActivity extends Activity {
                 return;
         }
 
-        googleApiBuilder.addGeofence(   mServerAddress.getText().toString(),
-                                        mServerPort.getText().toString(),
-                                        mPassword.getText().toString(),
-                                        mUsername.getText().toString(),
-                                        mLatitude.getText().toString(),
-                                        mLongitude.getText().toString(),
-                                        mGeofenceRadius.getText().toString(),
-                                        mIdxOfSwitch.getText().toString(),
-                                        mSpinner.getSelectedItem().toString());
+        googleApiBuilder.addGeofence(mServerAddress.getText().toString(),
+                mServerPort.getText().toString(),
+                mPassword.getText().toString(),
+                mUsername.getText().toString(),
+                mLatitude.getText().toString(),
+                mLongitude.getText().toString(),
+                mGeofenceRadius.getText().toString(),
+                mIdxOfSwitch.getText().toString(),
+                mSpinner.getSelectedItem().toString());
         Log.v(TAG, "Adding geofence");
     }
 
@@ -190,25 +249,25 @@ public class MainActivity extends Activity {
             return;
         }
         googleApiBuilder.removeGeofence(mServerAddress.getText().toString(),
-                                        mServerPort.getText().toString(),
-                                        mPassword.getText().toString(),
-                                        mUsername.getText().toString(),
-                                        mLatitude.getText().toString(),
-                                        mLongitude.getText().toString(),
-                                        mGeofenceRadius.getText().toString(),
-                                        mIdxOfSwitch.getText().toString(),
-                                        mSpinner.getSelectedItem().toString());
+                mServerPort.getText().toString(),
+                mPassword.getText().toString(),
+                mUsername.getText().toString(),
+                mLatitude.getText().toString(),
+                mLongitude.getText().toString(),
+                mGeofenceRadius.getText().toString(),
+                mIdxOfSwitch.getText().toString(),
+                mSpinner.getSelectedItem().toString());
         Log.v(TAG, "Removing geofence");
     }
 
     private void setButtonsEnabledState() {
         Log.v(TAG, "Reading SET geofence from storage: " + mSharedPreferences.getBoolean(PACKAGENAME + ".GEOFENCES_ADDED_KEY", false));
         if (mGeofencesAdded) {
-            mAddGeofencesButton.setVisibility(View.GONE);
-            mRemoveGeofencesButton.setVisibility(View.VISIBLE);
+            addGeofencesButton.setVisibility(View.GONE);
+            removeGeofencesButton.setVisibility(View.VISIBLE);
         } else {
-            mAddGeofencesButton.setVisibility(View.VISIBLE);
-            mRemoveGeofencesButton.setVisibility(View.GONE);
+            addGeofencesButton.setVisibility(View.VISIBLE);
+            removeGeofencesButton.setVisibility(View.GONE);
         }
     }
 
@@ -234,6 +293,62 @@ public class MainActivity extends Activity {
                                 mIdxOfSwitch.getText().toString() + "&switchcmd=On");
 
     }
+
+    public void getCurrentLocation(View view) {
+
+        if(googleApiBuilder!= null){
+
+            Location currentLocation = googleApiBuilder.getCurrentLocation();
+
+            if(currentLocation!=null){
+                mLatitude.setText(String.valueOf(currentLocation.getLatitude()));
+                mLongitude.setText((String.valueOf(currentLocation.getLongitude())));
+
+                Toast.makeText(this, "Found and set current location!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Could not find your current location.", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Could not find your current location.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    public void toggleNotifications(View view) {
+        boolean notifications = mSharedPreferences.getBoolean(PACKAGENAME + ".notifications", true);
+        SharedPreferences.Editor editor = mSharedPreferences.edit();
+        Log.v(TAG, "Stored Notifications: " + notifications);
+
+        if (notifications) {
+            editor.putBoolean(PACKAGENAME + ".notifications", false);
+            toggleNotification.setTitle("Enable notifications");
+            toggleNotification.setIcon(R.drawable.ic_notifications_black_48dp);
+        } else {
+            editor.putBoolean(PACKAGENAME + ".notifications", true);
+            toggleNotification.setIcon(R.drawable.ic_notifications_off_black_48dp);
+            toggleNotification.setTitle("Disable notifications");
+        }
+
+        editor.commit();
+
+        boolean notifications1 = mSharedPreferences.getBoolean(PACKAGENAME + ".notifications", true);
+        Log.v(TAG, "Stored Notifications after: " + notifications1);
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        if (requestCode == REQUEST_LOCATION_ACCESS) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                googleApiBuilder.initialize(this);
+                googleApiBuilder.getGoogleApiClient().connect();
+            } else {
+                Toast.makeText(this, "We can not work without access to your location", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+
 
     private class TestURL extends AsyncTask<String, Void, String> {
 

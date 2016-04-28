@@ -8,7 +8,7 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/geo_hires"
+        android:icon="@drawable/domofence_icon"
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         android:installLocation="internalOnly">

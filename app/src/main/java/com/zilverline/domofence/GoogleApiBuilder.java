@@ -1,10 +1,14 @@
 package com.zilverline.domofence;
 
+import android.Manifest;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.content.WakefulBroadcastReceiver;
 import android.util.Log;
@@ -36,24 +40,22 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
     private Context baseContext;
 
 
-
     @Override
-    public void onReceive(Context context, Intent intent)
-    {
+    public void onReceive(Context context, Intent intent) {
         initialize(context);
         Log.v(TAG, "onReceive after reboot");
 
-        if(mGeofencesAdded){
+        if (mGeofencesAdded) {
             Log.v(TAG, "Geofence was added, re-adding");
 
-            server_address = mSharedPreferences.getString(PACKAGENAME + ".server_address","not_found");
-            server_port = mSharedPreferences.getString(PACKAGENAME + ".server_port","not_found");
-            username = mSharedPreferences.getString(PACKAGENAME + ".username","not_found");
-            password = mSharedPreferences.getString(PACKAGENAME + ".password","not_found");
-            latitude = mSharedPreferences.getString(PACKAGENAME + ".latitude","not_found");
-            longitude = mSharedPreferences.getString(PACKAGENAME + ".longitude","not_found");
-            geofence_radius = mSharedPreferences.getString(PACKAGENAME + ".geofence_radius","not_found");
-            idx_of_switch = mSharedPreferences.getString(PACKAGENAME + ".idx_of_switch","not_found");
+            server_address = mSharedPreferences.getString(PACKAGENAME + ".server_address", "not_found");
+            server_port = mSharedPreferences.getString(PACKAGENAME + ".server_port", "not_found");
+            username = mSharedPreferences.getString(PACKAGENAME + ".username", "not_found");
+            password = mSharedPreferences.getString(PACKAGENAME + ".password", "not_found");
+            latitude = mSharedPreferences.getString(PACKAGENAME + ".latitude", "not_found");
+            longitude = mSharedPreferences.getString(PACKAGENAME + ".longitude", "not_found");
+            geofence_radius = mSharedPreferences.getString(PACKAGENAME + ".geofence_radius", "not_found");
+            idx_of_switch = mSharedPreferences.getString(PACKAGENAME + ".idx_of_switch", "not_found");
             protocol = mSharedPreferences.getString(PACKAGENAME + ".protocol", "not_found");
 
             start_after_boot = true;
@@ -76,19 +78,23 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
                 Context.MODE_PRIVATE);
         mGeofencesAdded = mSharedPreferences.getBoolean(PACKAGENAME + ".GEOFENCES_ADDED_KEY", false);
 
+        if (ActivityCompat.checkSelfPermission(baseContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(baseContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            throw new LocationServiceNoPermission();
+        }
+
         buildGoogleApiClient();
     }
 
-    protected void addGeofence(String server_address, String server_port, String password, String username, String latitude, String longitude, String geofence_radius, String idx_of_switch, String protocol){
-        Log.v(TAG, "Adding a geofence.  server_address: "+server_address+
-                                        " server_port: "+server_port+
-                                        " password: "+password+
-                                        " username: "+username+
-                                        " latitude: "+latitude+
-                                        " longitude: "+longitude+
-                                        " geofence_radius: "+geofence_radius+
-                                        " idx_of_switch: "+idx_of_switch+
-                                        " protocol: "+protocol);
+    protected void addGeofence(String server_address, String server_port, String password, String username, String latitude, String longitude, String geofence_radius, String idx_of_switch, String protocol) {
+        Log.v(TAG, "Adding a geofence.  server_address: " + server_address +
+                " server_port: " + server_port +
+                " password: " + password +
+                " username: " + username +
+                " latitude: " + latitude +
+                " longitude: " + longitude +
+                " geofence_radius: " + geofence_radius +
+                " idx_of_switch: " + idx_of_switch +
+                " protocol: " + protocol);
 
         this.server_address = server_address;
         this.server_port = server_port;
@@ -124,7 +130,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         this.idx_of_switch = idx_of_switch;
         this.protocol = protocol;
 
-        if(this.server_address.isEmpty()){
+        if (this.server_address.isEmpty()) {
             populateGeofenceList();
         }
         try {
@@ -161,11 +167,11 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
     }
 
     public void populateGeofenceList() {
-        Log.v(TAG, "Populating the Geofences: "+protocol+"://"+server_address+ ":"+server_port);
+        Log.v(TAG, "Populating the Geofences: " + protocol + "://" + server_address + ":" + server_port);
 
-        Log.v(TAG, "Values: "+Double.valueOf(latitude) + " " +
+        Log.v(TAG, "Values: " + Double.valueOf(latitude) + " " +
                 Double.valueOf(longitude) + " " +
-                Float.valueOf(geofence_radius) );
+                Float.valueOf(geofence_radius));
         mGeofenceList.add(new Geofence.Builder()
                 .setRequestId(server_address)
                 .setCircularRegion(
@@ -179,8 +185,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
                 .build());
     }
 
-    protected synchronized void buildGoogleApiClient() {
-
+    private synchronized void buildGoogleApiClient() {
         mGoogleApiClient = new GoogleApiClient.Builder(baseContext)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
@@ -188,6 +193,21 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
                 .build();
 
         Log.v(TAG, "Building the Google API Client");
+    }
+
+    protected Location getCurrentLocation() {
+
+        if (mGoogleApiClient != null) {
+            if (ActivityCompat.checkSelfPermission(baseContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(baseContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                throw new LocationServiceNoPermission();
+            }
+            return LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        } else {
+            Log.e(TAG, "Cant get currentlocation, GoogleApiCLient not ready");
+            Toast.makeText(baseContext, "Google client not (yet) ready, can't get current location.", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+
     }
 
     private GeofencingRequest getGeofencingRequest() {
@@ -275,5 +295,8 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
 
     public GoogleApiClient getGoogleApiClient() {
         return mGoogleApiClient;
+    }
+
+    public class LocationServiceNoPermission extends RuntimeException {
     }
 }
