@@ -6,7 +6,6 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
@@ -72,8 +71,9 @@ public class DomoFenceService extends IntentService {
 
             List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
 
-            String url = intent.getStringExtra("protocol")+"://" + intent.getStringExtra("server_address") + ":" +
-                    intent.getStringExtra("server_port") +
+            String optionalPort = (intent.getStringExtra("server_port").matches("\\d{1,5}") ? ":" + intent.getStringExtra("server_port") : "");
+
+            String url = intent.getStringExtra("protocol")+"://" + intent.getStringExtra("server_address") + optionalPort +
                     "/json.htm?type=command&param=switchlight&idx=" +
                     intent.getStringExtra("switchIdx")+"&switchcmd=";
 

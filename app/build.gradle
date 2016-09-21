@@ -1,18 +1,18 @@
 apply plugin: 'com.android.application'
 android {
-    compileSdkVersion 23
+    compileSdkVersion 24
     buildToolsVersion "23.0.2"
 
     defaultConfig {
         applicationId "com.zilverline.domofence"
         minSdkVersion 19
         targetSdkVersion 23
-        versionCode 15
-        versionName "2.5.0"
+        versionCode 19
+        versionName "2.6.3"
     }
     buildTypes {
         debug {
-            minifyEnabled false
+            minifyEnabled true
             debuggable true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
@@ -26,9 +26,9 @@ android {
 }
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:design:23.3.0'
-    compile 'com.android.support:appcompat-v7:23.3.0'
-    compile 'com.google.android.gms:play-services-location:8.4.0'
+    compile 'com.android.support:design:24.2.+'
+    compile 'com.android.support:appcompat-v7:24.2.+'
+    compile 'com.google.android.gms:play-services-location:9.4.0'
     compile 'com.getbase:floatingactionbutton:1.10.1'
 }
 

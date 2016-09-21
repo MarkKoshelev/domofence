@@ -253,7 +253,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
             editor.putString(PACKAGENAME + ".idx_of_switch", idx_of_switch);
             editor.putString(PACKAGENAME + ".protocol", protocol);
 
-            editor.apply();
+            editor.commit();
 
             if(mGeofencesAdded) {
                 sendStatus("Added");

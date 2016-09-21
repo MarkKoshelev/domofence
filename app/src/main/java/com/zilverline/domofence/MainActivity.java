@@ -220,7 +220,7 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "GoogleApiClient no yet connected. Try again.", Toast.LENGTH_SHORT).show();
             return;
         } else if(  mServerAddress.getText().length()==0 ||
-                    mServerPort.getText().length()==0 ||
+                    //mServerPort.getText().length()==0 ||
                     mPassword.getText().length()==0 ||
                     mUsername.getText().length()==0 ||
                     mLatitude.getText().length()==0 ||
@@ -275,7 +275,7 @@ public class MainActivity extends Activity {
     public void testServerConnection(View view) {
 
         if(  mServerAddress.getText().length()==0 ||
-                mServerPort.getText().length()==0 ||
+                //mServerPort.getText().length()==0 ||
                 mPassword.getText().length()==0 ||
                 mUsername.getText().length()==0 ||
                 mLatitude.getText().length()==0 ||
@@ -286,9 +286,10 @@ public class MainActivity extends Activity {
             return;
         }
 
+        String optionalPort = (mServerPort.getText().toString().matches("\\d{1,5}")) ? ":" + mServerPort.getText().toString() : "";
+
         new TestURL().execute(  mSpinner.getSelectedItem().toString() + "://" +
-                                mServerAddress.getText().toString() + ":" +
-                                mServerPort.getText().toString() +
+                                mServerAddress.getText().toString() + optionalPort +
                                 "/json.htm?type=command&param=switchlight&idx=" +
                                 mIdxOfSwitch.getText().toString() + "&switchcmd=On");
 
@@ -329,7 +330,7 @@ public class MainActivity extends Activity {
             toggleNotification.setTitle("Disable notifications");
         }
 
-        editor.commit();
+        editor.apply();
 
         boolean notifications1 = mSharedPreferences.getBoolean(PACKAGENAME + ".notifications", true);
         Log.v(TAG, "Stored Notifications after: " + notifications1);
