@@ -380,8 +380,7 @@ public class MainActivity extends Activity {
                     httpsUrlConnection.setHostnameVerifier(new HostnameVerifier() {
                         @Override
                         public boolean verify(String hostname, SSLSession session) {
-                            HostnameVerifier hv = HttpsURLConnection.getDefaultHostnameVerifier();
-                            return hv.verify(hostname, session) || hv.verify("*.domoticz.com", session);
+                            return true;
                         }
                     });
                     urlConnection = httpsUrlConnection;
