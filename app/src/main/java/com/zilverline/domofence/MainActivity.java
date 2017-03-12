@@ -114,7 +114,7 @@ public class MainActivity extends Activity {
         });
 
         String[] items = new String[]{"http", "https"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, items);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, items);
         mSpinner.setAdapter(adapter);
 
         mSharedPreferences = getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",

@@ -72,7 +72,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         Log.v(TAG, "Initializing GoogleApiBuilder");
 
         baseContext = context;
-        mGeofenceList = new ArrayList<Geofence>();
+        mGeofenceList = new ArrayList<>();
         mGeofencePendingIntent = null;
         mSharedPreferences = baseContext.getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
                 Context.MODE_PRIVATE);
