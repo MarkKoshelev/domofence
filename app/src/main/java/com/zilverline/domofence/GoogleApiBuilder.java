@@ -172,6 +172,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         Log.v(TAG, "Values: " + Double.valueOf(latitude) + " " +
                 Double.valueOf(longitude) + " " +
                 Float.valueOf(geofence_radius));
+
         mGeofenceList.add(new Geofence.Builder()
                 .setRequestId(server_address)
                 .setCircularRegion(
@@ -212,7 +213,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
 
     private GeofencingRequest getGeofencingRequest() {
         GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
-        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
+        builder.setInitialTrigger(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT);
         builder.addGeofences(mGeofenceList);
         return builder.build();
     }
@@ -277,7 +278,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
                 case GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS:
                     errorMessage = "You have provided too many PendingIntents to the addGeofences() call"; break;
                 default:
-                    errorMessage = "Unknown error: the Geofence service is not available now";
+                    errorMessage = "Unknown error: the Geofence service is not available now. " + status.getStatusCode();
             }
             Toast.makeText(baseContext, errorMessage, Toast.LENGTH_SHORT).show();
             Log.e(TAG, errorMessage);

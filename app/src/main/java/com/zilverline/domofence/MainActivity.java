@@ -47,13 +47,13 @@ public class MainActivity extends Activity {
     private static final String TAG = "DomoFence";
     private static final int REQUEST_LOCATION_ACCESS = 1977;
     private SharedPreferences mSharedPreferences;
-    private boolean mGeofencesAdded, mNotifications;
+    private boolean mGeofencesAdded, mNotifications, inGeofence;
     private static final String PACKAGENAME = "com.zilverline.domofence";
     private GoogleApiBuilder googleApiBuilder;
     private BroadcastReceiver mBroadcastReceiver;
     private LocalBroadcastManager mgr;
 
-    private FloatingActionButton addGeofencesButton, removeGeofencesButton, toggleNotification;
+    private FloatingActionButton addGeofencesButton, removeGeofencesButton, toggleNotification, testConnection;
     private EditText mServerAddress, mServerPort, mUsername, mPassword, mLatitude, mLongitude, mGeofenceRadius, mIdxOfSwitch;
     private Spinner mSpinner;
 
@@ -61,7 +61,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
 
         googleApiBuilder = new GoogleApiBuilder();
         try {
@@ -73,6 +72,7 @@ public class MainActivity extends Activity {
         addGeofencesButton = (FloatingActionButton) findViewById(R.id.start);
         removeGeofencesButton = (FloatingActionButton) findViewById(R.id.stop);
         toggleNotification = (FloatingActionButton) findViewById(R.id.toggleNotifications);
+        testConnection = (FloatingActionButton) findViewById(R.id.test_url);
         mServerAddress = (EditText) findViewById(R.id.server_address);
         mServerPort = (EditText) findViewById(R.id.server_port);
         mUsername = (EditText) findViewById(R.id.username);
@@ -177,6 +177,14 @@ public class MainActivity extends Activity {
             toggleNotification.setIcon(R.drawable.ic_notifications_black_48dp);
         }
 
+        inGeofence = mSharedPreferences.getBoolean(PACKAGENAME + ".inGeofence", true);
+
+        if(inGeofence){
+            testConnection.setTitle("Test connection (ON)");
+        } else {
+            testConnection.setTitle("Test connection (OFF)");
+        }
+
         setButtonsEnabledState();
     }
 
@@ -211,8 +219,12 @@ public class MainActivity extends Activity {
     protected void onStop() {
         Log.v(TAG, "onStop()");
         super.onStop();
-        googleApiBuilder.getGoogleApiClient().disconnect();
-        mgr.unregisterReceiver(mBroadcastReceiver);
+        if(googleApiBuilder != null && googleApiBuilder.getGoogleApiClient() != null){
+            googleApiBuilder.getGoogleApiClient().disconnect();
+        }
+        if(mgr != null){
+            mgr.unregisterReceiver(mBroadcastReceiver);
+        }
     }
 
     public void addGeofencesButtonHandler(View view) {
@@ -288,11 +300,16 @@ public class MainActivity extends Activity {
 
         String optionalPort = (mServerPort.getText().toString().matches("\\d{1,5}")) ? ":" + mServerPort.getText().toString() : "";
 
+        boolean inGeofence = mSharedPreferences.getBoolean(PACKAGENAME + ".inGeofence", true);
+        String state = "Off";
+        if(inGeofence){
+            state = "On";
+        }
+
         new TestURL().execute(  mSpinner.getSelectedItem().toString() + "://" +
                                 mServerAddress.getText().toString() + optionalPort +
                                 "/json.htm?type=command&param=switchlight&idx=" +
-                                mIdxOfSwitch.getText().toString() + "&switchcmd=On");
-
+                                mIdxOfSwitch.getText().toString() + "&switchcmd=" + state);
     }
 
     public void getCurrentLocation(View view) {
@@ -355,7 +372,7 @@ public class MainActivity extends Activity {
 
         @Override
         protected String doInBackground(String... params) {
-            String status = "";
+            StringBuilder status = new StringBuilder();
             String requestUrl = params[0];
 
             Authenticator.setDefault(new Authenticator() {
@@ -398,16 +415,16 @@ public class MainActivity extends Activity {
                 while (data != -1) {
                     char current = (char) data;
                     data = isw.read();
-                    status += current;
+                    status.append(current);
                 }
             } catch (MalformedURLException e) {
-                status = "Error in URL: " + e.getMessage();
+                status = new StringBuilder("Error in URL: " + e.getMessage());
                 e.printStackTrace();
             } catch (Exception e) {
-                status = "Error: " + e.getMessage();
+                status = new StringBuilder("Error: " + e.getMessage());
                 e.printStackTrace();
             }
-            return status;
+            return status.toString();
         }
 
         private SSLSocketFactory createSslSocketFactory() throws Exception {

@@ -11,9 +11,14 @@ import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.evernote.android.job.JobManager;
+import com.evernote.android.job.JobRequest;
+import com.evernote.android.job.util.support.PersistableBundleCompat;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
+import com.zilverline.domofence.scheduler.JobScheduler;
+import com.zilverline.domofence.scheduler.NetworkJobCreator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +26,6 @@ import java.util.List;
 public class DomoFenceService extends IntentService {
 
     private static final String TAG = "DomoFenceService";
-    private String username, password;
     private static final String PACKAGENAME = "com.zilverline.domofence";
 
 
@@ -32,6 +36,7 @@ public class DomoFenceService extends IntentService {
     @Override
     public void onCreate() {
         super.onCreate();
+        JobManager.create(getApplicationContext()).addJobCreator(new NetworkJobCreator());
         Log.v(TAG, "Service started");
     }
 
@@ -43,7 +48,12 @@ public class DomoFenceService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+
+        JobManager.create(getApplicationContext()).addJobCreator(new NetworkJobCreator());
+
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
+        String username, password;
+
         if (geofencingEvent.hasError()) {
             String errorMessage;
 
@@ -77,21 +87,29 @@ public class DomoFenceService extends IntentService {
                     "/json.htm?type=command&param=switchlight&idx=" +
                     intent.getStringExtra("switchIdx")+"&switchcmd=";
 
+            boolean inGeofence;
             if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-                sendStatus(url.replaceAll("\\s", "") + "On");
+                inGeofence = true;
+                scheduleRequest(url.replaceAll("\\s", "") + "On", username, password);
                 Log.v(TAG, "Switch ON");
             } else {
-                sendStatus(url.replaceAll("\\s", "") + "Off");
+                inGeofence = false;
+                scheduleRequest(url.replaceAll("\\s", "") + "Off", username, password);
                 Log.v(TAG, "Switch OFF");
             }
+
+            SharedPreferences mSharedPreferences = getApplicationContext().getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
+                    Context.MODE_PRIVATE);
+
+            SharedPreferences.Editor editor = mSharedPreferences.edit();
+            editor.putBoolean(PACKAGENAME + ".inGeofence", inGeofence);
+            editor.apply();
 
             String geofenceTransitionDetails = getGeofenceTransitionDetails(
                     this,
                     geofenceTransition,
                     triggeringGeofences
             );
-            SharedPreferences mSharedPreferences = getApplicationContext().getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
-                    Context.MODE_PRIVATE);
 
             boolean toggleNotifications = mSharedPreferences.getBoolean(PACKAGENAME + ".notifications", true);
             Log.v(TAG, "Notify: " + toggleNotifications);
@@ -102,19 +120,27 @@ public class DomoFenceService extends IntentService {
 
             Log.i(TAG, geofenceTransitionDetails);
         } else {
-            Log.e(TAG, "Geofence transition error: invalid transition type: "+geofenceTransition);
+            Log.e(TAG, "Geofence transition error: invalid transition type: " + geofenceTransition);
         }
 
     }
 
-    private void sendStatus(String message) {
-        Intent intent = new Intent("com.zilverline.domofence.DomoFenceService");
-        intent.putExtra("url", message);
-        intent.putExtra("username", username);
-        intent.putExtra("password", password);
+    private void scheduleRequest(String url, String username, String password) {
+        Log.d(TAG, "Scheduling a request: " + url);
+        PersistableBundleCompat extras = new PersistableBundleCompat();
+        extras.putString("url", url);
+        extras.putString("username", username);
+        extras.putString("password", password);
 
-        Log.v(TAG, "Sending Intent");
-        sendBroadcast(intent);
+        new JobRequest.Builder(JobScheduler.TAG)
+                .setExecutionWindow(500L, 5000L)
+                .setExtras(extras)
+                .setRequirementsEnforced(true)
+                .setUpdateCurrent(true)
+                .setRequiredNetworkType(JobRequest.NetworkType.CONNECTED)
+                .build()
+                .schedule();
+
     }
 
     private String getGeofenceTransitionDetails(
