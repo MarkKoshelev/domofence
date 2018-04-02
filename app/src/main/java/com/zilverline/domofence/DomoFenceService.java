@@ -22,6 +22,7 @@ import com.zilverline.domofence.scheduler.NetworkJobCreator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class DomoFenceService extends IntentService {
 
@@ -166,7 +167,7 @@ public class DomoFenceService extends IntentService {
         stackBuilder.addNextIntent(notificationIntent);
         PendingIntent notificationPendingIntent =
                 stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DomoFence_CH_ID");
         builder.setSmallIcon(R.drawable.geofence_notification)
                 .setContentTitle(notificationDetails)
                 .setContentText("Tap here to return to DomoFence")
@@ -174,7 +175,7 @@ public class DomoFenceService extends IntentService {
         builder.setAutoCancel(true);
         NotificationManager mNotificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        mNotificationManager.notify(0, builder.build());
+        Objects.requireNonNull(mNotificationManager).notify(0, builder.build());
     }
 
     private String getTransitionString(int transitionType) {

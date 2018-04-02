@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -69,22 +70,22 @@ public class MainActivity extends Activity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_LOCATION_ACCESS);
         }
 
-        addGeofencesButton = (FloatingActionButton) findViewById(R.id.start);
-        removeGeofencesButton = (FloatingActionButton) findViewById(R.id.stop);
-        toggleNotification = (FloatingActionButton) findViewById(R.id.toggleNotifications);
-        testConnection = (FloatingActionButton) findViewById(R.id.test_url);
-        mServerAddress = (EditText) findViewById(R.id.server_address);
-        mServerPort = (EditText) findViewById(R.id.server_port);
-        mUsername = (EditText) findViewById(R.id.username);
-        mPassword = (EditText) findViewById(R.id.password);
-        mLatitude = (EditText) findViewById(R.id.latitude);
-        mLongitude = (EditText) findViewById(R.id.longitude);
-        mGeofenceRadius = (EditText) findViewById(R.id.fence_radius);
-        mIdxOfSwitch = (EditText) findViewById(R.id.switch_idx);
-        mSpinner = (Spinner) findViewById(R.id.spinner);
+        addGeofencesButton = findViewById(R.id.start);
+        removeGeofencesButton = findViewById(R.id.stop);
+        toggleNotification = findViewById(R.id.toggleNotifications);
+        testConnection = findViewById(R.id.test_url);
+        mServerAddress = findViewById(R.id.server_address);
+        mServerPort = findViewById(R.id.server_port);
+        mUsername = findViewById(R.id.username);
+        mPassword = findViewById(R.id.password);
+        mLatitude = findViewById(R.id.latitude);
+        mLongitude = findViewById(R.id.longitude);
+        mGeofenceRadius = findViewById(R.id.fence_radius);
+        mIdxOfSwitch = findViewById(R.id.switch_idx);
+        mSpinner = findViewById(R.id.spinner);
 
 
-        FloatingActionsMenu actionsMenu = (FloatingActionsMenu) findViewById(R.id.extra_buttons);
+        FloatingActionsMenu actionsMenu = findViewById(R.id.extra_buttons);
         actionsMenu.setOnFloatingActionsMenuUpdateListener(new FloatingActionsMenu.OnFloatingActionsMenuUpdateListener() {
             @Override
             public void onMenuExpanded() {
@@ -355,7 +356,7 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
         if (requestCode == REQUEST_LOCATION_ACCESS) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 googleApiBuilder.initialize(this);

@@ -2,15 +2,16 @@ package com.zilverline.domofence;
 
 import android.Manifest;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
-import android.support.v4.content.WakefulBroadcastReceiver;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -22,10 +23,12 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
 
-public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
+public class GoogleApiBuilder extends BroadcastReceiver implements
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, ResultCallback<Status> {
 
     private static final String TAG = "GoogleApiBuilder";
@@ -109,11 +112,10 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
         populateGeofenceList();
 
         try {
-            LocationServices.GeofencingApi.addGeofences(
-                    mGoogleApiClient,
+            LocationServices.getGeofencingClient(baseContext).addGeofences(
                     getGeofencingRequest(),
                     getGeofencePendingIntent()
-            ).setResultCallback(this); // Result processed in onResult().
+            ).addOnCompleteListener(new GeofenceCompletedListener());
         } catch (SecurityException securityException) {
             logSecurityException(securityException);
         }
@@ -134,10 +136,9 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
             populateGeofenceList();
         }
         try {
-            LocationServices.GeofencingApi.removeGeofences(
-                    mGoogleApiClient,
+            LocationServices.getGeofencingClient(baseContext).removeGeofences(
                     getGeofencePendingIntent()
-            ).setResultCallback(this); // Result processed in onResult().
+            ).addOnCompleteListener(new GeofenceCompletedListener());
         } catch (SecurityException securityException) {
             logSecurityException(securityException);
         }
@@ -202,7 +203,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
             if (ActivityCompat.checkSelfPermission(baseContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(baseContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 throw new LocationServiceNoPermission();
             }
-            return LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+            return LocationServices.getFusedLocationProviderClient(baseContext).getLastLocation().getResult();
         } else {
             Log.e(TAG, "Cant get currentlocation, GoogleApiCLient not ready");
             Toast.makeText(baseContext, "Google client not (yet) ready, can't get current location.", Toast.LENGTH_SHORT).show();
@@ -234,12 +235,12 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
     }
 
     @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
     }
 
     @Override
-    public void onResult(Status status) {
+    public void onResult(@NonNull Status status) {
         if (status.isSuccess() && ! start_after_boot) {
             mGeofencesAdded = !mGeofencesAdded;
             SharedPreferences.Editor editor = mSharedPreferences.edit();
@@ -254,7 +255,7 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
             editor.putString(PACKAGENAME + ".idx_of_switch", idx_of_switch);
             editor.putString(PACKAGENAME + ".protocol", protocol);
 
-            editor.commit();
+            editor.apply();
 
             if(mGeofencesAdded) {
                 sendStatus("Added");
@@ -299,5 +300,45 @@ public class GoogleApiBuilder extends WakefulBroadcastReceiver implements
     }
 
     public class LocationServiceNoPermission extends RuntimeException {
+    }
+
+    public class GeofenceCompletedListener implements OnCompleteListener {
+        @Override
+        public void onComplete(@NonNull Task task) {
+            if (task.isSuccessful() && ! start_after_boot) {
+                mGeofencesAdded = !mGeofencesAdded;
+                SharedPreferences.Editor editor = mSharedPreferences.edit();
+                editor.putBoolean(PACKAGENAME + ".GEOFENCES_ADDED_KEY", mGeofencesAdded);
+                editor.putString(PACKAGENAME + ".server_address", server_address);
+                editor.putString(PACKAGENAME + ".server_port", server_port);
+                editor.putString(PACKAGENAME + ".username", username);
+                editor.putString(PACKAGENAME + ".password", password);
+                editor.putString(PACKAGENAME + ".longitude", longitude);
+                editor.putString(PACKAGENAME + ".latitude", latitude);
+                editor.putString(PACKAGENAME + ".geofence_radius", geofence_radius);
+                editor.putString(PACKAGENAME + ".idx_of_switch", idx_of_switch);
+                editor.putString(PACKAGENAME + ".protocol", protocol);
+
+                editor.apply();
+
+                if(mGeofencesAdded) {
+                    sendStatus("Added");
+                } else {
+                    sendStatus("Removed");
+                }
+
+                Toast.makeText(
+                        baseContext,
+                        mGeofencesAdded ? "The Geofence was added" : "All Geofences are removed",
+                        Toast.LENGTH_SHORT
+                ).show();
+            } else {
+                String errorMessage = "Error while registering a geofence: " + task.getResult();
+                Toast.makeText(baseContext, errorMessage, Toast.LENGTH_SHORT).show();
+                Log.e(TAG, errorMessage);
+            }
+
+            start_after_boot = false;
+        }
     }
 }

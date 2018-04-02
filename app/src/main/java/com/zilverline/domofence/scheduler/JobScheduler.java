@@ -28,7 +28,7 @@ public class JobScheduler extends Job {
 
     @NonNull
     @Override
-    protected Result onRunJob(Params params) {
+    protected Result onRunJob(@NonNull Params params) {
 
         final String url = params.getExtras().getString("url", "not_found");
         final String username = params.getExtras().getString("username", "not_found");
