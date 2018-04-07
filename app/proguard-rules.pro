@@ -27,3 +27,7 @@
   public protected private *;
 }
 
+-keep class com.zilverline.domofence.*
+
+-keep public class com.google.** {*;}
+

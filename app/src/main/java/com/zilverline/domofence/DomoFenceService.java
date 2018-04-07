@@ -1,6 +1,7 @@
 package com.zilverline.domofence;
 
 import android.app.IntentService;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -49,6 +50,8 @@ public class DomoFenceService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+
+        Log.d(TAG, "onHandleIntent: " + intent.getAction());
 
         JobManager.create(getApplicationContext()).addJobCreator(new NetworkJobCreator());
 
@@ -167,15 +170,26 @@ public class DomoFenceService extends IntentService {
         stackBuilder.addNextIntent(notificationIntent);
         PendingIntent notificationPendingIntent =
                 stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "DomoFence_CH_ID");
+
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("Domo_ID",
+                    "DOMOFENCE_CHANNEL",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription("Notification channel for DomoFence");
+            mNotificationManager.createNotificationChannel(channel);
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "Domo_ID");
         builder.setSmallIcon(R.drawable.geofence_notification)
                 .setContentTitle(notificationDetails)
                 .setContentText("Tap here to return to DomoFence")
                 .setContentIntent(notificationPendingIntent);
         builder.setAutoCancel(true);
-        NotificationManager mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        Objects.requireNonNull(mNotificationManager).notify(0, builder.build());
+
+        mNotificationManager.notify(0, builder.build());
     }
 
     private String getTransitionString(int transitionType) {

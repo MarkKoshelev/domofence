@@ -21,9 +21,12 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.evernote.android.job.JobRequest;
+import com.evernote.android.job.util.support.PersistableBundleCompat;
 import com.getbase.floatingactionbutton.FloatingActionButton;
 import com.getbase.floatingactionbutton.FloatingActionsMenu;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.zilverline.domofence.scheduler.JobScheduler;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -316,17 +319,7 @@ public class MainActivity extends Activity {
     public void getCurrentLocation(View view) {
 
         if(googleApiBuilder!= null){
-
-            Location currentLocation = googleApiBuilder.getCurrentLocation();
-
-            if(currentLocation!=null){
-                mLatitude.setText(String.valueOf(currentLocation.getLatitude()));
-                mLongitude.setText((String.valueOf(currentLocation.getLongitude())));
-
-                Toast.makeText(this, "Found and set current location!", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Could not find your current location.", Toast.LENGTH_SHORT).show();
-            }
+            googleApiBuilder.getCurrentLocation(mLatitude, mLongitude);
         } else {
             Toast.makeText(this, "Could not find your current location.", Toast.LENGTH_SHORT).show();
         }
