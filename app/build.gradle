@@ -7,8 +7,8 @@ android {
         applicationId "com.zilverline.domofence"
         minSdkVersion 19
         targetSdkVersion 27
-        versionCode 44
-        versionName "2.9.9"
+        versionCode 45
+        versionName "2.9.10"
     }
     buildTypes {
         debug {
@@ -31,8 +31,8 @@ android {
 }
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:design:27.1.0'
-    implementation 'com.android.support:appcompat-v7:27.1.0'
+    implementation 'com.android.support:design:27.1.1'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.google.android.gms:play-services-location:12.0.1'
     implementation 'com.google.android.gms:play-services-gcm:12.0.1'
     implementation 'com.getbase:floatingactionbutton:1.10.1'
