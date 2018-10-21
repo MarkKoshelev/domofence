@@ -22,6 +22,7 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.RuntimeExecutionException;
 import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
@@ -162,7 +163,7 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
         if (mGeofencePendingIntent != null){
             return mGeofencePendingIntent;
         }
-        Intent intent = new Intent(baseContext, DomoFenceService.class);
+        Intent intent = new Intent(baseContext, DomoFenceBroadcastReceiver.class);
         intent.putExtra("server_address", server_address);
         intent.putExtra("server_port", server_port);
         intent.putExtra("username", username);
@@ -172,8 +173,7 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
 
         Log.v(TAG, "Sending the Geofence Intent");
 
-        mGeofencePendingIntent = PendingIntent.getService(baseContext, 1977, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        return mGeofencePendingIntent;
+        return PendingIntent.getBroadcast(baseContext, 1977, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     public void populateGeofenceList() {
@@ -265,23 +265,30 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
     public class GeofenceCompletedListener implements OnCompleteListener {
         @Override
         public void onComplete(@NonNull Task task) {
-            if (task.isSuccessful() & !start_after_boot) {
-                mGeofencesAdded = !mGeofencesAdded;
-                SharedPreferences.Editor editor = mSharedPreferences.edit();
-                editor.putBoolean(PACKAGENAME + ".GEOFENCES_ADDED_KEY", mGeofencesAdded);
-                editor.putString(PACKAGENAME + ".server_address", server_address);
-                editor.putString(PACKAGENAME + ".server_port", server_port);
-                editor.putString(PACKAGENAME + ".username", username);
-                editor.putString(PACKAGENAME + ".password", password);
-                editor.putString(PACKAGENAME + ".longitude", longitude);
-                editor.putString(PACKAGENAME + ".latitude", latitude);
-                editor.putString(PACKAGENAME + ".geofence_radius", geofence_radius);
-                editor.putString(PACKAGENAME + ".idx_of_switch", idx_of_switch);
-                editor.putString(PACKAGENAME + ".protocol", protocol);
 
-                editor.apply();
-            } else if (!task.isSuccessful()){
-                String errorMessage = "Error while registering a geofence: " + task.getResult();
+            try{
+                if (task.isSuccessful() & !start_after_boot) {
+                    mGeofencesAdded = !mGeofencesAdded;
+                    SharedPreferences.Editor editor = mSharedPreferences.edit();
+                    editor.putBoolean(PACKAGENAME + ".GEOFENCES_ADDED_KEY", mGeofencesAdded);
+                    editor.putString(PACKAGENAME + ".server_address", server_address);
+                    editor.putString(PACKAGENAME + ".server_port", server_port);
+                    editor.putString(PACKAGENAME + ".username", username);
+                    editor.putString(PACKAGENAME + ".password", password);
+                    editor.putString(PACKAGENAME + ".longitude", longitude);
+                    editor.putString(PACKAGENAME + ".latitude", latitude);
+                    editor.putString(PACKAGENAME + ".geofence_radius", geofence_radius);
+                    editor.putString(PACKAGENAME + ".idx_of_switch", idx_of_switch);
+                    editor.putString(PACKAGENAME + ".protocol", protocol);
+
+                    editor.apply();
+                } else if (!task.isSuccessful()){
+                    String errorMessage = "Error while registering a geofence: " + task.getResult();
+                    Toast.makeText(baseContext, errorMessage, Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, errorMessage);
+                }
+            } catch (RuntimeExecutionException exception){
+                String errorMessage = "Error while registering a geofence: " + exception.getMessage();
                 Toast.makeText(baseContext, errorMessage, Toast.LENGTH_SHORT).show();
                 Log.e(TAG, errorMessage);
             }

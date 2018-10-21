@@ -1,9 +1,9 @@
 package com.zilverline.domofence;
 
-import android.app.IntentService;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -23,37 +23,20 @@ import com.zilverline.domofence.scheduler.NetworkJobCreator;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
-public class DomoFenceService extends IntentService {
+public class DomoFenceBroadcastReceiver extends BroadcastReceiver {
 
-    private static final String TAG = "DomoFenceService";
+    private static final String TAG = "DomoFenceBroadcastReceiver";
     private static final String PACKAGENAME = "com.zilverline.domofence";
-
-
-    public DomoFenceService() {
-        super(TAG);
-    }
+    private Context context = null;
 
     @Override
-    public void onCreate() {
-        super.onCreate();
-        JobManager.create(getApplicationContext()).addJobCreator(new NetworkJobCreator());
-        Log.v(TAG, "Service started");
-    }
-
-    @Override
-    public void onDestroy() {
-        Log.v(TAG, "Service stopped");
-        super.onDestroy();
-    }
-
-    @Override
-    protected void onHandleIntent(Intent intent) {
+    public void onReceive(Context context, Intent intent) {
 
         Log.d(TAG, "onHandleIntent: " + intent.getAction());
+        this.context = context;
 
-        JobManager.create(getApplicationContext()).addJobCreator(new NetworkJobCreator());
+        JobManager.create(context).addJobCreator(new NetworkJobCreator());
 
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         String username, password;
@@ -102,7 +85,7 @@ public class DomoFenceService extends IntentService {
                 Log.v(TAG, "Switch OFF");
             }
 
-            SharedPreferences mSharedPreferences = getApplicationContext().getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
+            SharedPreferences mSharedPreferences = context.getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
                     Context.MODE_PRIVATE);
 
             SharedPreferences.Editor editor = mSharedPreferences.edit();
@@ -110,7 +93,7 @@ public class DomoFenceService extends IntentService {
             editor.apply();
 
             String geofenceTransitionDetails = getGeofenceTransitionDetails(
-                    this,
+                    getContext(),
                     geofenceTransition,
                     triggeringGeofences
             );
@@ -127,6 +110,10 @@ public class DomoFenceService extends IntentService {
             Log.e(TAG, "Geofence transition error: invalid transition type: " + geofenceTransition);
         }
 
+    }
+
+    private Context getContext(){
+        return this.context;
     }
 
     private void scheduleRequest(String url, String username, String password) {
@@ -164,15 +151,15 @@ public class DomoFenceService extends IntentService {
     }
 
     private void sendNotification(String notificationDetails) {
-        Intent notificationIntent = new Intent(getApplicationContext(), MainActivity.class);
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        Intent notificationIntent = new Intent(getContext(), MainActivity.class);
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(getContext());
         stackBuilder.addParentStack(MainActivity.class);
         stackBuilder.addNextIntent(notificationIntent);
         PendingIntent notificationPendingIntent =
                 stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
 
         NotificationManager mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("Domo_ID",
@@ -182,7 +169,7 @@ public class DomoFenceService extends IntentService {
             mNotificationManager.createNotificationChannel(channel);
         }
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "Domo_ID");
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getContext(), "Domo_ID");
         builder.setSmallIcon(R.drawable.geofence_notification)
                 .setContentTitle(notificationDetails)
                 .setContentText("Tap here to return to DomoFence")

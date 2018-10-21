@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".DomoFenceService" />
+        <receiver android:name=".DomoFenceBroadcastReceiver" />
         <service
             android:name="com.evernote.android.job.gcm.PlatformGcmService"
             android:exported="true"
