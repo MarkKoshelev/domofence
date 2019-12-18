@@ -17,7 +17,8 @@
         android:icon="@drawable/domofence_icon"
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
-        android:installLocation="internalOnly">
+        android:installLocation="internalOnly"
+        android:usesCleartextTraffic="true">
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version"/>
