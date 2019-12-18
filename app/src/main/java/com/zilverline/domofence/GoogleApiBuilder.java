@@ -1,5 +1,7 @@
 package com.zilverline.domofence;
 
+import java.util.ArrayList;
+
 import android.Manifest;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -9,13 +11,12 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.core.app.ActivityCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.Geofence;
@@ -24,8 +25,6 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.RuntimeExecutionException;
 import com.google.android.gms.tasks.Task;
-
-import java.util.ArrayList;
 
 public class GoogleApiBuilder extends BroadcastReceiver implements
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -39,7 +38,7 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
 
     private PendingIntent mGeofencePendingIntent;
     private SharedPreferences mSharedPreferences;
-    private String server_address, server_port, username, password, latitude, longitude, geofence_radius, idx_of_switch, protocol;
+    private String server_address, server_port, username, password, latitude, longitude, geofence_radius, idx_of_switch, protocol, overridden_server_address;
     private Context baseContext;
 
 
@@ -61,6 +60,7 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
                 geofence_radius = mSharedPreferences.getString(PACKAGENAME + ".geofence_radius", "not_found");
                 idx_of_switch = mSharedPreferences.getString(PACKAGENAME + ".idx_of_switch", "not_found");
                 protocol = mSharedPreferences.getString(PACKAGENAME + ".protocol", "not_found");
+                overridden_server_address = mSharedPreferences.getString(PACKAGENAME + ".overridden_server_address", "not_found");
 
                 start_after_boot = true;
                 mGoogleApiClient.connect();
@@ -170,6 +170,7 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
         intent.putExtra("password", password);
         intent.putExtra("switchIdx", idx_of_switch);
         intent.putExtra("protocol", protocol);
+        intent.putExtra("overridden_server_address", overridden_server_address);
 
         Log.v(TAG, "Sending the Geofence Intent");
 
@@ -204,7 +205,7 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
             }
             LocationServices.getFusedLocationProviderClient(baseContext).getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
                 @Override
-                public void onComplete(@NonNull Task<Location> task) {
+                public void onComplete(Task<Location> task) {
                     if (task.isSuccessful() && task.getResult() != null) {
                         lat.setText(String.valueOf(task.getResult().getLatitude()));
                         lon.setText((String.valueOf(task.getResult().getLongitude())));
@@ -244,7 +245,7 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
     }
 
     @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+    public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
     }
 
@@ -264,7 +265,7 @@ public class GoogleApiBuilder extends BroadcastReceiver implements
 
     public class GeofenceCompletedListener implements OnCompleteListener {
         @Override
-        public void onComplete(@NonNull Task task) {
+        public void onComplete(Task task) {
 
             try{
                 if (task.isSuccessful() & !start_after_boot) {

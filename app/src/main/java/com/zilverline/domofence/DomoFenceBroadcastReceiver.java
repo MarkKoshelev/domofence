@@ -1,5 +1,8 @@
 package com.zilverline.domofence;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -7,11 +10,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
 import android.text.TextUtils;
 import android.util.Log;
 
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.TaskStackBuilder;
 import com.evernote.android.job.JobManager;
 import com.evernote.android.job.JobRequest;
 import com.evernote.android.job.util.support.PersistableBundleCompat;
@@ -21,12 +24,9 @@ import com.google.android.gms.location.GeofencingEvent;
 import com.zilverline.domofence.scheduler.JobScheduler;
 import com.zilverline.domofence.scheduler.NetworkJobCreator;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class DomoFenceBroadcastReceiver extends BroadcastReceiver {
 
-    private static final String TAG = "DomoFenceBroadcastReceiver";
+    private static final String TAG = "DomoFenceBcReceiver";
     private static final String PACKAGENAME = "com.zilverline.domofence";
     private Context context = null;
 
@@ -39,89 +39,107 @@ public class DomoFenceBroadcastReceiver extends BroadcastReceiver {
         JobManager.create(context).addJobCreator(new NetworkJobCreator());
 
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
-        String username, password;
+        String username, password, overridden_server_address;
 
-        if (geofencingEvent.hasError()) {
-            String errorMessage;
-
-            switch (geofencingEvent.getErrorCode()) {
-                case GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE:
-                    errorMessage = "Geofence service is not available now"; break;
-                case GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES:
-                    errorMessage = "Your app has registered too many geofences"; break;
-                case GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS:
-                    errorMessage = "You have provided too many PendingIntents to the addGeofences() call"; break;
-                default:
-                    errorMessage = "Unknown error: the Geofence service is not available now";
-            }
-            Log.e(TAG, errorMessage);
-            return;
-        } else {
+        if (intent.getAction().equals("TestConnection")) {
             username = intent.getStringExtra("username");
             password = intent.getStringExtra("password");
-        }
-        int geofenceTransition = geofencingEvent.getGeofenceTransition();
-        Log.v(TAG, "Geofence Transition: " + geofenceTransition);
+            overridden_server_address = intent.getStringExtra("overridden_server_address");
 
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ||
-                geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
+            String url = intent.getStringExtra("protocol")+"://" + intent.getStringExtra("server_address") + intent.getStringExtra("server_port") +
+                "/json.htm?type=command&param=switchlight&idx=" +
+                intent.getStringExtra("switchIdx")+"&switchcmd=" + intent.getStringExtra("state");
+            scheduleRequest(url.replaceAll("\\s", ""), username, password, overridden_server_address);
 
-            List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
+        } else {
 
-            String optionalPort = (intent.getStringExtra("server_port").matches("\\d{1,5}") ? ":" + intent.getStringExtra("server_port") : "");
+            if (geofencingEvent.hasError()) {
+                String errorMessage;
 
-            String url = intent.getStringExtra("protocol")+"://" + intent.getStringExtra("server_address") + optionalPort +
-                    "/json.htm?type=command&param=switchlight&idx=" +
-                    intent.getStringExtra("switchIdx")+"&switchcmd=";
-
-            boolean inGeofence;
-            if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-                inGeofence = true;
-                scheduleRequest(url.replaceAll("\\s", "") + "On", username, password);
-                Log.v(TAG, "Switch ON");
+                switch (geofencingEvent.getErrorCode()) {
+                    case GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE:
+                        errorMessage = "Geofence service is not available now";
+                        break;
+                    case GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES:
+                        errorMessage = "Your app has registered too many geofences";
+                        break;
+                    case GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS:
+                        errorMessage = "You have provided too many PendingIntents to the addGeofences() call";
+                        break;
+                    default:
+                        errorMessage = "Unknown error: the Geofence service is not available now";
+                }
+                Log.e(TAG, errorMessage);
+                return;
             } else {
-                inGeofence = false;
-                scheduleRequest(url.replaceAll("\\s", "") + "Off", username, password);
-                Log.v(TAG, "Switch OFF");
+                username = intent.getStringExtra("username");
+                password = intent.getStringExtra("password");
+                overridden_server_address = intent.getStringExtra("overridden_server_address");
             }
 
-            SharedPreferences mSharedPreferences = context.getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
+            int geofenceTransition = geofencingEvent.getGeofenceTransition();
+            Log.v(TAG, "Geofence Transition: " + geofenceTransition);
+
+            if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER ||
+                geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
+
+                List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
+
+                String optionalPort = (intent.getStringExtra("server_port").matches("\\d{1,5}") ? ":" + intent.getStringExtra("server_port") : "");
+
+                String url = intent.getStringExtra("protocol") + "://" + intent.getStringExtra("server_address") + optionalPort +
+                    "/json.htm?type=command&param=switchlight&idx=" +
+                    intent.getStringExtra("switchIdx") + "&switchcmd=";
+
+                boolean inGeofence;
+                if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
+                    inGeofence = true;
+                    scheduleRequest(url.replaceAll("\\s", "") + "On", username, password, overridden_server_address);
+                    Log.v(TAG, "Switch ON");
+                } else {
+                    inGeofence = false;
+                    scheduleRequest(url.replaceAll("\\s", "") + "Off", username, password, overridden_server_address);
+                    Log.v(TAG, "Switch OFF");
+                }
+
+                SharedPreferences mSharedPreferences = context.getSharedPreferences(PACKAGENAME + ".SHARED_PREFERENCES_NAME",
                     Context.MODE_PRIVATE);
 
-            SharedPreferences.Editor editor = mSharedPreferences.edit();
-            editor.putBoolean(PACKAGENAME + ".inGeofence", inGeofence);
-            editor.apply();
+                SharedPreferences.Editor editor = mSharedPreferences.edit();
+                editor.putBoolean(PACKAGENAME + ".inGeofence", inGeofence);
+                editor.apply();
 
-            String geofenceTransitionDetails = getGeofenceTransitionDetails(
+                String geofenceTransitionDetails = getGeofenceTransitionDetails(
                     getContext(),
                     geofenceTransition,
                     triggeringGeofences
-            );
+                );
 
-            boolean toggleNotifications = mSharedPreferences.getBoolean(PACKAGENAME + ".notifications", true);
-            Log.v(TAG, "Notify: " + toggleNotifications);
+                boolean toggleNotifications = mSharedPreferences.getBoolean(PACKAGENAME + ".notifications", true);
+                Log.v(TAG, "Notify: " + toggleNotifications);
 
-            if (toggleNotifications) {
-                sendNotification(geofenceTransitionDetails);
+                if (toggleNotifications) {
+                    sendNotification(geofenceTransitionDetails);
+                }
+
+                Log.i(TAG, geofenceTransitionDetails);
+            } else {
+                Log.e(TAG, "Geofence transition error: invalid transition type: " + geofenceTransition);
             }
-
-            Log.i(TAG, geofenceTransitionDetails);
-        } else {
-            Log.e(TAG, "Geofence transition error: invalid transition type: " + geofenceTransition);
         }
-
     }
 
     private Context getContext(){
         return this.context;
     }
 
-    private void scheduleRequest(String url, String username, String password) {
+    private void scheduleRequest(String url, String username, String password, String overridden_server_address) {
         Log.d(TAG, "Scheduling a request: " + url);
         PersistableBundleCompat extras = new PersistableBundleCompat();
         extras.putString("url", url);
         extras.putString("username", username);
         extras.putString("password", password);
+        extras.putString("overridden_server_address", overridden_server_address);
 
         new JobRequest.Builder(JobScheduler.TAG)
                 .setExecutionWindow(500L, 5000L)
