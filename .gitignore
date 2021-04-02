@@ -8,3 +8,6 @@
 *.apk
 *.iml
 app/*.iml
+cache/
+wrapper/
+daemon/
